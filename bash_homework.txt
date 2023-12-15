@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Define separate metrics and thresholds
+metrics=(
+  cpu_usage
+  80%
+  mem_usage
+  90%
+  disk_usage
+  / 85%
+  uptime
+  0
+  services
+  ssh|httpd running
+  logs
+  error /var/log/syslog
+  latency
+  google.com 50ms
+  throughput
+  iperf -c server -p 8080 10s 10M
+  response_time
+  ab -n 100 -c 10 http://localhost:8080/
+)
+
+# Initialize output file
+out_file="metrics.txt"
+
+# Function to check and write metric values
+function check_metric() {
+  local metric="$1"
+  local threshold="${2:-0}" # Use index 2 for threshold (adjust if needed)
+
+  # Replace this with your preferred command to capture the metric
+  local value=""
+
+  case "$metric" in
+    cpu_usage) value=$(top -n 1 | grep 'CPU%' | awk '{print $1}') ;;
+    mem_usage) value=$(free -m | awk 'NR==2 {print $3/$2*100}') ;;
+    # ... Add similar cases for other metrics ...
+  esac
+
+
+  if [[ "$value" -gt "${metrics[$i + 1]%.*}" || "$metric" == services && pgrep -fx 'ssh|httpd' || "$metric" == logs && grep 'error' /var/log/syslog ]]; then
+ echo "$metric: $value" >> "$out_file"
+  fi
+}
+
+# Loop for continuous monitoring
+while true; do
+  for i in "${!metrics[@]}"; do
+    # Extract metric and threshold based on index
+    metric="${metrics[$i]}"
+    threshold="${metrics[$i + 1]}"
+
+    check_metric "$metric" "$threshold"
+  done
+
+  sleep 1 # Adjust delay between refreshes
+
+done
+
+echo "Metrics successfully collected and written to '$out_file'"
+
+exit 0
